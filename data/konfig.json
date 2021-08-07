@@ -1,0 +1,13 @@
+{
+    "configured" : "false",
+    "wifi_ssid" : "AAP_IoT",
+    "wifi_password" : "1234567890",
+    "wifi_client" : "true",
+    "web_updater_url" : "",
+    "web_updater_token" : "",
+    "mqtt_host" : "",
+    "mqtt_user" :"",
+    "mqtt_password" : "",
+    "mqtt_token" : "",
+    "mqtt_topic" : ""
+}

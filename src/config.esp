@@ -1,0 +1,47 @@
+void ICACHE_FLASH_ATTR LoadConfig(){
+  File file_konfig = SPIFFS.open("/konfig.json", "r");
+  if(file_konfig){
+    size_t size = file_konfig.size();
+    if (size > 1024){
+      Serial.println("Config size to big");
+    }
+    std::unique_ptr<char[]> buf(new char[size]);
+    //read configuration file
+    file_konfig.readBytes(buf.get(), size);
+    StaticJsonBuffer<200> jsonBuffer;
+    JsonObject& json_konfig = jsonBuffer.parseObject(buf.get());
+    if (!json_konfig.success()) {
+      Serial.println("Failed to parse config file");
+      return false;
+    }else{
+      //check if device configured
+      if(json_konfig["configured"] == "true"){
+        Serial.println("Get configuration");
+        wifi_ssid = json_konfig["wifi_ssid"];
+        wifi_password = json_konfig["wifi_password"];
+        // check wifi mode is AP or Client
+        if (json_konfig["wifi_client"] == "true"){
+          wifi_mode = false;
+          Serial.println("Wifi Mode : Access Point");
+        }
+        else{
+          wifi_mode = true;
+          Serial.println("Wifi Mode : CLient");
+        }
+        Serial.print("Wifi SSID : ");
+        Serial.println(wifi_ssid);
+        // set default configuration status to false
+        def_state = false;
+      }
+      else{
+        Serial.println("Configuration not configured.\nUsing default configuration.");
+        return false;
+      }
+    }
+  }else{
+    Serial.println("Failed to load configuration file");
+    return false;
+  }
+  file_konfig.close();
+
+}

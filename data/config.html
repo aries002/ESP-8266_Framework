@@ -1,0 +1,57 @@
+<html>
+    <head>
+        <title>ESP8266 Configuration</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="icon" href="data:,">
+        <link rel="stylesheet" type="text/css" href="style.css">
+    </head>
+    <body>
+        <h1>ESP8266 Configuration</h1>
+        <form method="POST" action="/save_config">
+            <table>
+                <tr>
+                    <td>Wifi Mode</td>
+                    <td><input type="radio" value="true" name="wifi_mode" id="wifi_client" >
+                        <label for="wifi_client">Wifi Client</label>
+                        <input type="radio" value="false" name="wifi_mode" id="wifi_ap">
+                        <label for="wifi_ap">Wifi Acces Point</label>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Wifi SSID</td>
+                    <td><input type="text" name="wifi_ssid" id="wifi_ssid" required></td>
+                </tr>
+                <tr>
+                    <td>Wifi Password</td>
+                    <td><input type="text" name="wifi_password" id="wifi_password" required  minlength="8"></td>
+                </tr>
+                <!-- MQTT Configuration -->
+                <tr>
+                    <td>MQTT Broker Host</td>
+                    <td><input type="text" name="mqtt_host" id="mqtt_host"></td>
+                </tr>
+                <tr>
+                    <td>MQTT Username</td>
+                    <td><input type="text" name="mqtt_user" id="mqtt_user"></td>
+                </tr>
+                <tr>
+                    <td>MQTT Password</td>
+                    <td><input type="text" name="mqtt_password" id="mqtt_password"></td>
+                </tr>
+                <tr>
+                    <td>MQTT Token</td>
+                    <td><input type="text" name="mqtt_token" id="mqtt_token"></td>
+                </tr>
+                <tr>
+                    <td>MQTT Topic</td>
+                    <td><input type="text" name="mqtt_topic" id="mqtt_topic" required></td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><input type="submit"></td>
+                </tr>
+            </table>
+        </form>
+        
+    </body>
+</html>
