@@ -45,3 +45,4 @@ void ICACHE_FLASH_ATTR LoadConfig(){
   file_konfig.close();
 
 }
+

@@ -1,0 +1,214 @@
+///////////////////////////////////////////////////////////////////////////////////
+/*
+                Web Server Setup
+  This file contains web server and web socket setup function. When need to add more
+pages or new function you can edit this file and add the web server config on webserver function.
+
+*/
+
+///////////////////////////////////////////////////////////////////////////////////
+
+
+
+//-------------------------------------SYSTEM WEB PROCESSOR--------------------------
+void ICACHE_FLASH_ATTR handleConfig(AsyncWebServerRequest *request){
+  bool configured = false;
+  
+  Serial.println("Change configuration...");
+  
+  if(request->hasParam("wifi_ssid", true) && request->hasParam("wifi_password", true) && request->hasParam("mqtt_host", true) && request->hasParam("web_updater_url")){
+    StaticJsonBuffer<256> jsonBuffer;
+    JsonObject &root = jsonBuffer.createObject();
+    //wifi config
+    root["configured"] = "true";
+    root["wifi_ssid"] = request->getParam("wifi_ssid", true)->value();
+    root["wifi_password"] = request->getParam("wifi_password", true)->value();
+    String mode_wifi = request->getParam("wifi_mode", true)->value();
+    if(mode_wifi == "true"){
+      root["wifi_client"] = "true";
+    }else{
+      root["wifi_client"] = "false";
+    }
+    //mqtt config
+    root["mqtt_host"] = request->getParam("mqtt_host", true)->value();
+    if(root["mqtt_host"] != ""){
+      String input_mqtt_user = request->getParam("mqtt_user", true)->value();
+      if(input_mqtt_user != ""){
+        root["mqtt_user"] = input_mqtt_user;
+        root["mqtt_password"] = request->getParam("mqtt_password", true)->value();
+      }
+      String input_mqtt_topic = request->getParam("mqtt_topic", true)->value();
+      if(input_mqtt_topic != ""){
+        root["mqtt_topic"] = input_mqtt_topic;
+      }
+      else{
+        root["mqtt_topic"] = "ESP_Framework";
+      }
+    }
+    else{
+      root["mqtt_user"] = "";
+      root["mqtt_password"] = "";
+      root["mqtt_topic"] = "";
+    }
+    // Delete old version
+    SPIFFS.remove("/konfig.json");
+    // Create the new one
+    File f = SPIFFS.open("/konfig.json", "w");
+    if (root.printTo(f) == 0) {
+      Serial.println(F("Failed to write to file"));
+    }
+    f.close();
+    Serial.println("Configuration saved.");
+    req_reboot = true;
+  }
+}
+
+String ICACHE_FLASH_ATTR getTemperature() {
+  float temperature = 28.88;
+  // Read temperature as Fahrenheit (isFahrenheit = true)
+  //float temperature = 1.8 * bme.readTemperature() + 32;
+  Serial.println(temperature);
+  return String(temperature);
+}
+  
+String ICACHE_FLASH_ATTR getHumidity() {
+  float humidity = 80.88;
+  Serial.println(humidity);
+  return String(humidity);
+}
+
+String ICACHE_FLASH_ATTR getPressure() {
+  float pressure = 34.00/ 100.0F;
+  Serial.println(pressure);
+  return String(pressure);
+}
+
+//configuration page text processor
+String ICACHE_FLASH_ATTR config_processor(const String& var){
+  if(var == "WIFI_SSID"){
+    return wifi_ssid;
+  }
+  else if(var == "WIFI_PASSWORD"){
+    return wifi_password;
+  }
+  else if(var == "WIFI_MODE"){
+    if(wifi_mode){
+      return "selected";
+    }
+    else{
+      return "";
+    }
+  }
+  else if(var == "MQTT_HOST"){
+    return mqtt_host;
+  }
+  else if(var == "MQTT_USER"){
+    return mqtt_user;
+  }
+  else if(var == "MQTT_PASSWORD"){
+    return mqtt_password;
+  }
+  else if(var == "MQTT_TOPIC"){
+    return mqtt_topic;
+  }
+  else{
+    return "null";
+  }
+}
+
+String ICACHE_FLASH_ATTR processor(const String& var){
+  Serial.println(var);
+  if(var == "STATE"){
+    if(digitalRead(ledPin)){
+      ledState = "ON";
+    }
+    else{
+      ledState = "OFF";
+    }
+    Serial.print(ledState);
+    return ledState;
+  }
+  else if (var == "TEMPERATURE"){
+    return "34";
+  }
+  else if (var == "HUMIDITY"){
+    return "80";
+  }
+  else if (var == "PRESSURE"){
+    return "1";
+  }
+  else{
+    return "0";
+  }
+}
+
+
+// main web server route
+void ICACHE_FLASH_ATTR webserver(){
+  //....................................WEB SERVER SETUP............................
+  // Web Server using main web service
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(SPIFFS, "/index.html", String(), false, processor);
+  });
+  // Route to load style.css file
+  server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(SPIFFS, "/style.css", "text/css");
+  });
+    // Route to set GPIO to HIGH
+  server.on("/on", HTTP_GET, [](AsyncWebServerRequest *request){
+    digitalWrite(ledPin, HIGH);    
+    request->send(SPIFFS, "/index.html", String(), false, processor);
+  });
+  
+  // Route to set GPIO to LOW
+  server.on("/off", HTTP_GET, [](AsyncWebServerRequest *request){
+    digitalWrite(ledPin, LOW);    
+    request->send(SPIFFS, "/index.html", String(), false, processor);
+  });
+
+  server.on("/temperature", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send_P(200, "text/plain", getTemperature().c_str());
+  });
+  
+  server.on("/humidity", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send_P(200, "text/plain", getHumidity().c_str());
+  });
+  
+  server.on("/pressure", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send_P(200, "text/plain", getPressure().c_str());
+  });
+
+
+  //web configuration and 404
+  server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(SPIFFS, "/konfig.html", String(), false, config_processor);
+  });
+
+  server.on("/save_config", HTTP_POST,  [](AsyncWebServerRequest *request){
+    handleConfig(request);
+    request->redirect("/");
+  });
+
+  server.onNotFound([](AsyncWebServerRequest *request) {
+		AsyncWebServerResponse *response = request->beginResponse(404, "text/plain", "Not found");
+		request->send(response);
+	});
+  server.begin();
+}
+
+// fallback and first configuration route
+void ICACHE_FLASH_ATTR fallback_webserver(){
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(SPIFFS, "/konfig.html", String(), false, config_processor);
+  });
+
+  server.on("/save_config", HTTP_POST,  [](AsyncWebServerRequest *request){
+    handleConfig(request);
+    request->redirect("/");
+  });
+  server.onNotFound([](AsyncWebServerRequest *request) {
+		AsyncWebServerResponse *response = request->beginResponse(404, "text/plain", "Not found");
+		request->send(response);
+	});
+  server.begin();
+}

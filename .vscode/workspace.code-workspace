@@ -6,6 +6,10 @@
 		{
 			"name": "ESP-8266_QuickFramework",
 			"path": ".."
+		},
+		{
+			"name": "uji_coba",
+			"path": "..\\..\\..\\PlatformIO\\Projects\\uji_coba"
 		}
 	],
 	"settings": {
