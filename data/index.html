@@ -11,6 +11,7 @@
   <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
+
   <h1>ESP8266 Web Server</h1>
   <p>GPIO state<strong> %STATE%</strong></p>
   <p>
@@ -32,6 +33,24 @@
     <span id="pressure">%PRESSURE%</span>
     <sup class="units">hPa</sup>
   </p>
+  <table>
+    <tr>
+      <td>
+        <form action="restart" method="POST">
+          <input type="submit" value="restart" name="submit">
+        </form>
+        
+      </td>
+      <td>
+        <form action="reset" method="POST">
+          <input type="submit" value="reset" name="submit">
+        </form>
+      </td>
+      <td>
+        <a href="config">Configuration</a>
+      </td>
+    </tr>
+  </table>
 </body>
 <script>
   setInterval(function ( ) {

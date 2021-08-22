@@ -1,13 +1,18 @@
-bool ICACHE_FLASH_ATTR wifi_client_setup(const char *ssid, const char *password){
+bool ICACHE_FLASH_ATTR wifi_client_setup(const char* ssid, const char* password){
 #ifdef DEBUG
   Serial.print("Connecting to ");
   Serial.println(ssid);
   Serial.println(password);
 #endif
   WiFi.begin(ssid, password);
-  if (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    Serial.println("WiFi Failed!");
-    return false;
+  int timeout = 0;
+  while (WiFi.status() != WL_CONNECTED && timeout <= 30)
+  {
+#ifdef DEBUG
+    Serial.print(".");
+#endif
+    delay(500);
+    timeout++;
   }
   if(WiFi.status() == WL_CONNECTED){
 #ifdef DEBUG
@@ -28,23 +33,27 @@ bool ICACHE_FLASH_ATTR wifi_client_setup(const char *ssid, const char *password)
 }
 
 bool ICACHE_FLASH_ATTR wifi_AP_setup(const char *ssid, const char *password = NULL){
-
-  if (password != NULL)
+#ifdef DEBUG
+  // Report("Seting up Access Point ");
+  // Serial.println((char *)ssid);
+#endif
+  if (wifi_password != NULL)
   {
 #ifdef DEBUG
-    Serial.print("AP password   : ");
-    Serial.println(password);
+    // Serial.print("AP password   : ");
+    // Serial.println((char *)password);
 #endif
   }
-  // Serial.println(ssid);
-  // Serial.println(password);
-  if(!WiFi.softAP(ssid, password)){
+    // WiFi.softAP(wifi_ssid, wifi_password);
+    Serial.println(ssid);
+    Serial.println(password);
+  // if(!WiFi.softAP(in_ssid, in_password)){
     Serial.println("AP Setup Failed!!");
-    // WiFi.printDiag(Serial);
+    WiFi.printDiag(Serial);
     return false;
-  }else{
-    return true;
-  }
+  // }else{
+    // return true;
+  // }
 }
 
 bool ICACHE_FLASH_ATTR wifi_fallback(){

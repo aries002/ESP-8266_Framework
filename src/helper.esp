@@ -1,0 +1,14 @@
+void ICACHE_FLASH_ATTR Report(String msg = "", int level = 1){
+    switch (level)
+    {
+    case 0:
+        Serial.println('['+ millis() + ']' + '[' + "error" + ']' + msg);
+        break;
+    case 1:
+        Serial.println('['+ millis() + ']' + '[' + "info" + ']' + msg);
+        break;
+    default:
+        Serial.println('['+ millis() + ']' +  msg);
+        break;
+    }
+}
