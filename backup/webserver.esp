@@ -38,26 +38,41 @@ void ICACHE_FLASH_ATTR handleConfig(AsyncWebServerRequest *request){
     }
 
     //mqtt config
+    
+
+    
     root["mqtt_host"] = request->getParam("mqtt_host", true)->value();
     root["mqtt_user"] = request->getParam("mqtt_user", true)->value();
-    root["mqtt_password"] = request->getParam("mqtt_password", true)->value();
-    root["mqtt_clientID"] = (mqtt_clientID != NULL) ? mqtt_clientID : gen_mqtt_clientid();
-    root["mqtt_topic"] = (request->getParam("mqtt_topic", true)->value() != "") ? request->getParam("mqtt_topic", true)->value() : "ESP-8266";
-    root["mqtt_out_topic"] = root["mqtt_topic"] + "_OUT";
-    root["mqtt_in_topic"] = root["mqtt_topic"] + "_IN";
-    root["mqtt"] = (root["mqtt_host"] != "") ? true : false;
     
-    // web updater config
+
+    if(root["mqtt_host"] != false){
+      root["mqtt"] = true;
+      String input_mqtt_user = request->getParam("mqtt_user", true)->value();
+      if(input_mqtt_user != ""){
+        root["mqtt_user"] = input_mqtt_user;
+        root["mqtt_password"] = request->getParam("mqtt_password", true)->value();
+      }else{
+        root["mqtt_user"] = "admin";
+        root["mqtt_password"] = "";
+      }
+      String input_mqtt_topic = request->getParam("mqtt_topic", true)->value();
+      if(input_mqtt_topic != ""){
+        root["mqtt_topic"] = input_mqtt_topic;
+      }
+      else{
+        root["mqtt_topic"] = "ESP_Framework";
+      }
+    }else{
+      root["mqtt"] = false;
+    }
+
     root["web_updater_url"] = request->getParam("web_updater_url", true)->value();
     root["web_updater_token"] = request->getParam("web_updater_token", true)->value();
-    root["web_updater"] = (root["web_updater_url"] != "") ? true : false;
     // root["web_updater_url"] = (request->getParam("web_updater_url", true)->value() != "") ? request->getParam("web_updater_url", true) : "";
     // root["web_updater_token"] = (request->getParam("web_updater_token", true)->value() != "") ? request->getParam("web_updater_token", true) : "";
     // Delete old version
     if(SPIFFS.exists("/konfig.json")){
-#ifdef DEBUG
       Serial.println("Removing Configuration");
-#endif
       SPIFFS.remove("/konfig.json");
     }
     // Create the new one
@@ -72,7 +87,7 @@ void ICACHE_FLASH_ATTR handleConfig(AsyncWebServerRequest *request){
     }
     f.close();
     request->send(200, "text/plain", "Configuration saved!!. Device rebooting..");
-    delay(3000);
+    delay(1000);
     ESP.restart();
   }
 }

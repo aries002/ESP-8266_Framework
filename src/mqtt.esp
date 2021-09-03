@@ -1,5 +1,6 @@
 //---------------------------------------SYSTEM MQTT CONNECTOR----------------------
-void ICACHE_FLASH_ATTR callback(char* topic, byte* payload, unsigned int length) {
+void ICACHE_FLASH_ATTR mqtt_callback(char* topic, byte* payload, int length) {
+#ifdef DEBUG
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
@@ -7,7 +8,7 @@ void ICACHE_FLASH_ATTR callback(char* topic, byte* payload, unsigned int length)
     Serial.print((char)payload[i]);
   }
   Serial.println();
-
+#endif
   // Switch on the LED if an 1 was received as first character
   if ((char)payload[0] == '1') {
     digitalWrite(statusLED, LOW);   // Turn the LED on (Note that LOW is the voltage level
@@ -19,28 +20,34 @@ void ICACHE_FLASH_ATTR callback(char* topic, byte* payload, unsigned int length)
 
 }
 
-void ICACHE_FLASH_ATTR reconnect() {
+
+bool ICACHE_FLASH_ATTR mqtt_reconnect() {
   // Loop until we're reconnected
-  while (!client.connected()) {
+  if (!mqtt_client.connected()) {
+#ifdef DEBUG
     Serial.print("Attempting MQTT connection...");
-    // Create a random client ID
-    String clientId = "ESP8266Client-";
-    clientId += String(random(0xffff), HEX);
+#endif
+
     // Attempt to connect
     
-    if (client.connect(clientId.c_str())) {
+    if (mqtt_client.connect(mqtt_clientID)) {
+#ifdef DEBUG
       Serial.println("connected");
       // Once connected, publish an announcement...
-      client.publish("outTopic", "hello world");
+#endif
+      mqtt_client.publish(mqtt_out_topic, "hello world");
       // ... and resubscribe
-      client.subscribe("inTopic");
+      mqtt_client.subscribe(mqtt_in_topic);
+      
+      return true;
     } else {
+#ifdef DEBUG
       Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
+      Serial.print(mqtt_client.state());
+#endif
+      return false;
     }
   }
+  return true;
 }
 

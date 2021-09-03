@@ -1,14 +1,25 @@
-void ICACHE_FLASH_ATTR Report(String msg = "", int level = 1){
+void ICACHE_FLASH_ATTR Log(String msg = "", int level = 1){
+    long milisecond = millis();
+    Serial.print('[');
+    Serial.print(milisecond);
+    Serial.print(']');
     switch (level)
     {
     case 0:
-        Serial.println('['+ millis() + ']' + '[' + "error" + ']' + msg);
+        Serial.print("[error] ");
         break;
     case 1:
-        Serial.println('['+ millis() + ']' + '[' + "info" + ']' + msg);
+        Serial.print("[info ] ");
         break;
     default:
-        Serial.println('['+ millis() + ']' +  msg);
+        Serial.print("[     ] ");
         break;
     }
+    Serial.println(msg);
+}
+
+String ICACHE_FLASH_ATTR gen_mqtt_clientid(){
+    String clientId = "ESP8266Client-";
+    clientId += String(random(0xffff), HEX);
+    return clientId;
 }

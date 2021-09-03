@@ -10,6 +10,9 @@
 		{
 			"name": "uji_coba",
 			"path": "..\\..\\..\\PlatformIO\\Projects\\uji_coba"
+		},
+		{
+			"path": "..\\..\\..\\..\\Downloads\\asyncUpdate-master\\asyncUpdate-master"
 		}
 	],
 	"settings": {

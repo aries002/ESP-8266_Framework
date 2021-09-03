@@ -2,7 +2,7 @@ bool ICACHE_FLASH_ATTR set_config(){
   File file_konfig = SPIFFS.open("/konfig.json", "r");
   if(!file_konfig){
 #ifdef DEBUG
-    Log("Config file not found!");
+    Report("Config file not found!");
 #endif
     return false;
   }
@@ -15,7 +15,7 @@ bool ICACHE_FLASH_ATTR set_config(){
   JsonObject& json_konfig = jsonBuffer.parseObject(buf.get());
   if(!json_konfig.success()){
 #ifdef DEBUG
-    Log("Failed to parse json configuration!!", 0);
+    Report("Failed to parse json configuration!!", 0);
 #endif
     file_konfig.close();
     return false;
@@ -46,25 +46,16 @@ bool ICACHE_FLASH_ATTR set_config(){
   }
 
   // get mqtt configuration
-  mqtt = json_konfig["mqtt"];
-  if(mqtt){
+  if(json_konfig["mqtt"]){
+    mqtt = true;
     String proc_mqtt_host = json_konfig["mqtt_host"];
     mqtt_host = strdup(proc_mqtt_host.c_str());
-    if(json_konfig["mqtt_user"] != ""){
-      String proc_mqtt_user = json_konfig["mqtt_user"];
-      mqtt_user = strdup(proc_mqtt_user.c_str());
-      String proc_mqtt_password = json_konfig["mqtt_password"];
-      mqtt_password = strdup(proc_mqtt_password.c_str());
-    }
-    String proc_mqtt_out_topic = json_konfig["mqtt_out_topic"];
-    mqtt_out_topic = strdup(proc_mqtt_out_topic.c_str());
-    String proc_mqtt_in_topic = json_konfig["mqtt_in_topic"];
-    mqtt_in_topic = strdup(proc_mqtt_in_topic.c_str());
-    
+    String proc_mqtt_user = json_konfig["mqtt_user"];
+    mqtt_user = strdup(proc_mqtt_user.c_str());
+    String proc_mqtt_password = json_konfig["mqtt_password"];
+    mqtt_password = strdup(proc_mqtt_password.c_str());
     String proc_mqtt_topic = json_konfig["mqtt_topic"];
     mqtt_topic = strdup(proc_mqtt_topic.c_str());
-    String proc_mqtt_clientID = json_konfig["mqtt_clientID"];
-    mqtt_clientID = strdup(proc_mqtt_clientID.c_str());
 #ifdef DEBUG
     Serial.println("Mqtt activated!!");
     Serial.println(mqtt_host);

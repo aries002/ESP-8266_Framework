@@ -11,9 +11,9 @@
             <table>
                 <tr>
                     <td>Wifi Mode</td>
-                    <td><input type="radio" value="true" name="wifi_mode" id="wifi_client" >
+                    <td><input type="radio" value="true" name="wifi_mode" id="wifi_client" %WIFI_CLIENT% >
                         <label for="wifi_client">Wifi Client</label>
-                        <input type="radio" value="false" name="wifi_mode" id="wifi_ap">
+                        <input type="radio" value="false" name="wifi_mode" id="wifi_ap" %WIFI_AP%>
                         <label for="wifi_ap">Wifi Acces Point</label>
                     </td>
                 </tr>
@@ -52,10 +52,23 @@
                 </tr>
                 <tr>
                     <td></td>
-                    <td><input type="submit"></td>
+                    <td><input type="submit" onclick="return confirm('Save configuration and restart device?');" value="Save"></td>
                 </tr>
             </table>
         </form>
-        
+        <p>
+            <span>
+                <form action="restart" method="POST">
+                    <input type="hidden" name="action" value="restart">
+                    <input type="submit" value="Restart Device" onclick="return confirm('Restart device??');">
+                </form>
+            </span>
+            <span>
+                <form action="reset" method="POST">
+                    <input type="hidden" name="action" value="reset">
+                    <input type="submit" value="Reset Configuration" onclick="return confirm('Reset Configuration??');">
+                </form>
+            </span>
+        </p>
     </body>
 </html>

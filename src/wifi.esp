@@ -4,6 +4,7 @@ bool ICACHE_FLASH_ATTR wifi_client_setup(const char *ssid, const char *password)
   Serial.println(ssid);
   Serial.println(password);
 #endif
+  WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   if (WiFi.waitForConnectResult() != WL_CONNECTED) {
     Serial.println("WiFi Failed!");
