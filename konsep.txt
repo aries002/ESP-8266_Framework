@@ -1,0 +1,8 @@
+Fitur Utama :
+    Web konfigurasi dan dashboard []
+    mqtt sender []
+    web updater
+    full wifi config
+    reset button
+    status led
+    ota update

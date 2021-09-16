@@ -1,0 +1,25 @@
+/*
+//============================================================================================
+
+//============================================================================================
+*/
+
+bool ICACHE_FLASH_ATTR user_setup(){
+    return true;
+}
+
+bool ICACHE_RAM_ATTR user_loop(){
+    return true;
+}
+
+void ICACHE_FLASH_ATTR mqtt_subscribe(){
+
+}
+
+void ICACHE_FLASH_ATTR mqtt_publish(){
+
+}
+
+void ICACHE_FLASH_ATTR web_sender(){
+
+}

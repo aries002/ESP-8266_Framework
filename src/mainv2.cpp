@@ -1,5 +1,5 @@
 #define DEBUG
-
+#define logLevel 2
 //------------------------------LIBRARY DECLARATION-----------------------------
 #include "Arduino.h"
 #include <ESP8266WiFi.h>
@@ -27,18 +27,21 @@ const int statusLED = 2;
 #endif
 long send_interval = 5000;
 const int rst_pin = 0;
+char* system_name = "ESPFrame";
 
 // system states
 bool config_state = false;
 bool req_reboot = false;
 bool req_reset = false;
-
+bool user_stat = false;
+bool net_state = false;
 
 // web updater configuration
 bool web_updater = false;
+long web_updater_lastMsg = 0;
+long web_updater_interval = 10000;
 char* web_updater_url = NULL;
 char* web_updater_token = NULL;
-long last_web_updater_send = 0;
 
 // mqtt configuration
 WiFiClient espClient;
@@ -52,7 +55,9 @@ char* mqtt_clientID = NULL;
 char* mqtt_pub_topic = NULL;
 char* mqtt_sub_topic = NULL;
 long last_mqtt_connect = 0;
-long lastMsg = 0;
+long mqtt_interval = 1000;
+long mqtt_lastMsg = 0;
+
 #define MSG_BUFFER_SIZE	(100)
 char msg[MSG_BUFFER_SIZE];
 int value = 0;
@@ -77,69 +82,68 @@ const int swtich_1 = D2;
 
 
 //---------------------------------------CUSTOM FUNCTION INCLUDE-------------------
+#include "user_main.esp"
 #include "helper.esp"
-#include "configuration.esp"
-#include "webserver.esp"
 #include "wifi.esp"
 #include "mqtt.esp"
+#include "configurationv2.esp"
+#include "webserverv2.esp"
 //--------------------------------------SYSTEM MAIN SETUP-----------------------------
 void ICACHE_FLASH_ATTR setup(){
+  // generate important variables
+  if(mqtt_clientID == NULL || mqtt_clientID == ""){
+    mqtt_clientID = strdup(gen_mqtt_clientid().c_str());
+  }
   //......................................SENSOR SETUP..............................
   // pin and sensor setup
   Serial.begin(115200);
   Serial.println();
   Log("Welcome To ESP_Frame Arduino!!");
-  Log("System Starting...", 2);
   pinMode(statusLED, OUTPUT);
   //=======================================PIN SETUP HERE==============================
 
   //=================================================================================
 
   if(!SPIFFS.begin()){
-#ifdef DEBUG
     Log("SPIFFS Error !!", 0);
-#endif
     delay(1000);
     ESP.restart();
   }
   config_state = set_config();
 
   if(!config_state){
-#ifdef DEBUG
     Log("Start first configuration..", 3);
-#endif
     wifi_fallback();
     webserver_fallback();
   }
   else{
     if(wifi_mode){
-#ifdef DEBUG
       Log("Setup Client!!", 3);
-      Log(wifi_ssid);
-      Log(wifi_password);
-#endif
-      if(!wifi_client_setup(wifi_ssid, wifi_password)){
+      Log(wifi_ssid, 3);
+      Log(wifi_password, 3);
+      net_state = wifi_client_setup(wifi_ssid, wifi_password);
+      if(!net_state){
         wifi_set_to_fallback();
       }
     }
     else{
-#ifdef DEBUG
       Log("Setup AP!!", 3);
-      Log(wifi_ssid);
-      Log(wifi_password);
-#endif
+      Log(wifi_ssid, 3);
+      Log(wifi_password, 3);
       if(!wifi_AP_setup(wifi_ssid, wifi_password)){
       }
     }
     webserver();
-    if(mqtt){
+    if(mqtt && net_state){
       mqtt_client.setServer(mqtt_host, 1883);
       mqtt_client.setCallback(mqtt_callback);
     }
   }
-  // generate important variables
-  if(mqtt_clientID == NULL || mqtt_clientID == ""){
-    mqtt_clientID = strdup(gen_mqtt_clientid().c_str());
+
+  Log("Setting up user script", 3);
+  user_stat = user_setup();
+  if(user_stat){
+    Log("User script failed to setup!", 0);
   }
   Log("System Started!!", 2);
 }
@@ -150,34 +154,27 @@ void ICACHE_RAM_ATTR loop(){
     delay(200);
     ESP.restart();
   }
-  
-  if(wifi_mode){
-    long time_now = millis();
-    //connect to mqtt broker
-    if(mqtt){
+  long time_now = millis();
+  if(config_state){
+    user_loop();
+    if(net_state){
+      //mqtt reconnect
       if(time_now - last_mqtt_connect >= 10000 && !mqtt_client.connected()){
         last_mqtt_connect = time_now;
-        if(!mqtt_reconnect()){
-        }
+        mqtt_reconnect();
       }
       if(mqtt_client.connected()){
         mqtt_client.loop();
       }
-    }
 
-    //data sender
-    if(time_now - lastMsg >= send_interval){
-      lastMsg = time_now;
-      if(mqtt && mqtt_client.connected()){
-
-        ++value;
-        snprintf (msg, MSG_BUFFER_SIZE, "hello world #%ld", value);
-        Serial.print("Publish message: ");
-        Serial.println(msg);
-        mqtt_client.publish(mqtt_pub_topic, msg);
+      //data sender
+      //MQTT data sender
+      if(time_now - mqtt_lastMsg >= mqtt_interval){
+        mqtt_publish();
       }
-      if(web_updater){
-        
+      //web data sender
+      if(time_now - web_updater_lastMsg >= web_updater_interval){
+        web_sender();
       }
     }
   }

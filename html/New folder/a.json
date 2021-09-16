@@ -1,0 +1,3 @@
+{"wifi_ssid":"wireless@umsida.ac.id","wifi_password":"AhmadDahlan1868","wifi_mode":true,"mqtt_host":"","mqtt_user":"","mqtt_password":"","mqtt_clientID":"ESP8266Client-6461","mqtt_sub_topic":"ESP-8266-SUB","mqtt_pub_topic":"ESP-8266-PUB","mqtt":false,"web_updater_url":"","web_updater_token":"","web_updater":false}
+
+{"wifi_ssid":"wireless@umsida.ac.id","wifi_password":"AhmadDahlan1868","wifi_mode":true,"mqtt_host":"","mqtt_user":"","mqtt_password":"","mqtt_clientID":"ESP8266Client-58e6","mqtt_sub_topic":"ESP-8266-SUB","mqtt_pub_topic":"ESP-8266-PUB","mqtt":false,"web_updater":true,"web_updater_url":"","web_updater_token":""}

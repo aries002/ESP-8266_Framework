@@ -10,12 +10,14 @@ void ICACHE_FLASH_ATTR mqtt_callback(char* topic, byte* payload, int length) {
   Serial.println();
 #endif
   // Switch on the LED if an 1 was received as first character
-  if ((char)payload[0] == '1') {
-    digitalWrite(statusLED, LOW);   // Turn the LED on (Note that LOW is the voltage level
-    // but actually the LED is on; this is because
-    // it is active low on the ESP-01)
-  } else {
-    digitalWrite(statusLED, HIGH);  // Turn the LED off by making the voltage HIGH
+  if(topic == mqtt_sub_topic){
+    if ((char)payload[0] == '1') {
+      digitalWrite(statusLED, LOW);   // Turn the LED on (Note that LOW is the voltage level
+      // but actually the LED is on; this is because
+      // it is active low on the ESP-01)
+    } else {
+      digitalWrite(statusLED, HIGH);  // Turn the LED off by making the voltage HIGH
+    }
   }
 
 }
@@ -35,19 +37,18 @@ bool ICACHE_FLASH_ATTR mqtt_reconnect() {
       Serial.println("connected");
       // Once connected, publish an announcement...
 #endif
-      mqtt_client.publish(mqtt_out_topic, "hello world");
+      mqtt_client.publish(mqtt_pub_topic, "hello world");
       // ... and resubscribe
-      mqtt_client.subscribe(mqtt_in_topic);
+      mqtt_client.subscribe(mqtt_sub_topic);
       
       return true;
     } else {
 #ifdef DEBUG
       Serial.print("failed, rc=");
-      Serial.print(mqtt_client.state());
+      Serial.println(mqtt_client.state());
 #endif
       return false;
     }
   }
   return true;
 }
-
