@@ -8,125 +8,92 @@ pages or new function you can edit this file and add the web server config on we
 
 ///////////////////////////////////////////////////////////////////////////////////
 
+//------------------------------------- HANDLE FIRST CONFIG-------------------------
+void ICACHE_FLASH_ATTR handleFirstConfig(AsyncWebServerRequest *request){
+  // checking and get variables value
+  bool sts_save = save_first_webconfig(request);
+  if(!sts_save){
+    request->send(200, "text/html", "Configuration failed!<br><a href=\"\\\">Click here to back!<\\a>");
+  }
+  else{
+    request->send(200, "text/html", "Configuration successfull!<br>Please close this page and go to new IP address!<br>Device will rebooting soon.");
+    req_reboot = true;
+  }
+}
 
-
-//------------------------------------- HANDLE RESTART--------------------------
+//------------------------------------- HANDLE RESTART------------------------------
 void ICACHE_FLASH_ATTR handleRestart(AsyncWebServerRequest *request){
   if(request->getParam("actiom", true)->value() == "restart"){
-    request->send(200, "text/plain", "Device restarting");
+    request->send(200, "text/html", "Device restarting");
     req_reboot = true;
   }else{
-    request->send(200, "text/plain", "Illegal Request!!");
+    request->send(200, "text/html", "Illegal Request!!");
   }
+}
+
+//--------------------------------------HANDLE OTA UPDATE--------------------------
+void ICACHE_FLASH_ATTR handleOTA(AsyncWebServerRequest *request){
+  
 }
 
 //--------------------------------------HANDLE CONFIGURATION------------------------
 void ICACHE_FLASH_ATTR handleConfig(AsyncWebServerRequest *request){
-  Log("Change configuration...", 3);
-  if(request->hasParam("wifi_ssid", true) && request->hasParam("wifi_password", true) && request->hasParam("mqtt_host", true) && request->hasParam("web_updater_url", true)){
-    Log("Creating Json Buffer", 3);
-    // const size_t capacity = JSON_OBJECT_SIZE(13);
-    DynamicJsonBuffer jsonBuffer;
-    // DynamicJsonBuffer jsonBuffer;
-    JsonObject &root = jsonBuffer.createObject();
-    //wifi config
-    Log("Json Buffer Created");
-    root["wifi_ssid"] = request->getParam("wifi_ssid", true)->value();
-    root["wifi_password"] = request->getParam("wifi_password", true)->value();
-    String mode_wifi = request->getParam("wifi_mode", true)->value();
-    if(mode_wifi == "true"){
-      root["wifi_mode"] = true;
+  if(request->hasParam("config", true)){
+    String config = request->getParam("config",true)->value();
+    Log("Change configuration...", 3);
+    String msg = "";
+    //SYSTEM CONFIGURATION
+    if(request->hasParam("system_name",true)){
+      Log("System configuration",3);
+      if(save_system_webconfig(request)){
+        msg =+ "System config saved. Device will reboot soon";
+        req_reboot = true;
+      }else{
+        msg =+  "Failed to config WiFi network <a haref=\"/\">click here to return<\\a>";
+      }
+    }
+    //NETWORK CONFIGURATION
+    else if(request->hasParam("wifi_ssid",true)){
+      Log("wifi config",3);
+      if(save_wifi_webconfig(request)){
+        msg =+ "WiFi network successfully configured. Device will reboot soon.";
+        req_reboot = true;
+      }else{
+        msg =+  "Failed to config WiFi network <a haref=\"/\">click here to return<\\a>";
+      }
+
+    }
+    //MQTT CONFIGURATION
+    else if(config == "mqtt"){
+      Log("MQTT Configuration",3);
+      save_mqtt_webconfig(request);
+      mqtt = set_mqtt_config();
+      mqtt_connect();
+      msg =+ "MQTT configuration saved. <a haref=\"/\">click here to return<\\a>";
+    }
+    //WEB UPDATER
+    else if(request->hasParam("web_updater_url",true)){
+      msg =+ "Web updater configuration saved. <a haref=\"/\">click here to return<\\a>";
     }else{
-      root["wifi_mode"] = false;
+      msg =+ "Illegal request!!";
     }
-    Log("mqtt config");
-    //mqtt config
-    root["mqtt"] = (root["mqtt_host"] != "") ? true : false;
-    root["mqtt_host"] = request->getParam("mqtt_host", true)->value();
-    root["mqtt_user"] = request->getParam("mqtt_user", true)->value();
-    root["mqtt_password"] = request->getParam("mqtt_password", true)->value();
-    // root["mqtt_clientID"] = (mqtt_clientID == NULL) ? gen_mqtt_clientid() : mqtt_clientID;
-    // root["mqtt_clientID"] = (request->getParam("mqtt_clientid", true)->value() != "") ? request->getParam("mqtt_clientid", true)->value() : mqtt_clientID;
-    root["mqtt_clientID"] = mqtt_clientID;
-    // root["mqtt_topic"] = (request->getParam("mqtt_topic", true)->value() != "") ? request->getParam("mqtt_topic", true)->value() : "ESP-8266";
-    root["mqtt_sub_topic"] = (request->getParam("mqtt_sub_topic", true)->value() != "") ? request->getParam("mqtt_sub_topic", true)->value() : "ESP-8266-SUB";
-    root["mqtt_pub_topic"] = (request->getParam("mqtt_pub_topic", true)->value() != "") ? request->getParam("mqtt_pub_topic", true)->value() : "ESP-8266-PUB";
-    
-    Log("web updater");
-    // web updater config
-    root["web_updater"] = (root["web_updater_url"] != "") ? true : false;
-    root["web_updater_url"] = request->getParam("web_updater_url", true)->value();
-    root["web_updater_token"] = request->getParam("web_updater_token", true)->value();
-    // root["web_updater_url"] = (request->getParam("web_updater_url", true)->value() != "") ? request->getParam("web_updater_url", true)->value() : "";
-    // root["web_updater_token"] = (request->getParam("web_updater_token", true)->value() != "") ? request->getParam("web_updater_token", true)->value() : "";
-    // Delete old version
-    Log("Saving config");
-    if(SPIFFS.exists("/konfig.json")){
-#ifdef DEBUG
-      Serial.println("Removing Configuration");
-#endif
-      SPIFFS.remove("/konfig.json");
-    }
-    Log("Create file");
-    // Create the new one
-    File f = SPIFFS.open("/konfig.json", "w");
-#ifdef DEBUG
-    Log("print to file");
-    root.printTo(Serial);
-#endif
-    if (root.printTo(f) == 0) {
-#ifdef DEBUG
-      Serial.println("Failed to write to file");
-#endif
-    }
-    Log("File writed");
-    f.close();
-#ifdef DEBUG
-    Serial.println("Isi file :");
-    File tes_file = SPIFFS.open("/konfig.json", "r");
-    Serial.write(tes_file.read());
-    tes_file.close();
-    Serial.println();
-    Serial.println();
-#endif
-    request->send(200, "text/plain", "Configuration saved!!. Device rebooting..");
-    delay(3000);
-    req_reboot = true;
   }
-}
-
-
-
-
-
-
-//-------------------------------------HANDLE SENSOR READING-------------------------
-String ICACHE_FLASH_ATTR getTemperature() {
-  long temperature = random(28, 38);
-  // Read temperature as Fahrenheit (isFahrenheit = true)
-  //float temperature = 1.8 * bme.readTemperature() + 32;
-  Serial.println(temperature);
-  return String(temperature);
-}
+  request->send(200, "text/html", msg);
   
-String ICACHE_FLASH_ATTR getHumidity() {
-  long humidity = random(50, 80);
-  Serial.println(humidity);
-  return String(humidity);
 }
 
-String ICACHE_FLASH_ATTR getPressure() {
-  long pressure = random(10, 100);
-  Serial.println(pressure);
-  return String(pressure);
-}
-
-
-//--------------------------------WEB PAGES BACK END-----------------------------
+//--------------------------------WEB PAGES PROCESSOR--------------------------------
 //configuration page text processor
 String ICACHE_FLASH_ATTR config_processor(const String& var){
   if(var == "WIFI_SSID"){
     return wifi_ssid;
+  }
+  if(var == "NAVBAR"){
+    if(config_state){
+      return "block";
+    }else{
+      return "none";
+    }
   }
   else if(var == "WIFI_PASSWORD"){
     return wifi_password;
@@ -189,30 +156,58 @@ String ICACHE_FLASH_ATTR processor(const String& var){
     Serial.print(ledState);
     return ledState;
   }
-  else if (var == "TEMPERATURE"){
-    return getTemperature();
-  }
-  else if (var == "HUMIDITY"){
-    return getHumidity();
-  }
-  else if (var == "PRESSURE"){
-    return getPressure();
-  }
   else{
     return "0";
   }
 }
 
-//----------------------------------------------WEB ROUTES-----------------------------------
+//----------------------------------------------WEB ROUTES---------------------------
 // main web server route
+
+void ICACHE_FLASH_ATTR handle_general(){
+  server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(SPIFFS, "/style.css", "text/css");
+  });
+  server.on("/bootstrap.min.css", HTTP_GET, [](AsyncWebServerRequest *request){
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/css", bootstrap_min_css_gz, bootstrap_min_css_gz_len);
+    response->addHeader("Content-Encoding", "gzip");
+    request->send(response);
+  });
+  server.on("/bootstrap.min.js", HTTP_GET, [](AsyncWebServerRequest *request){
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/javascript", bootstrap_min_js_gz, bootstrap_min_js_gz_len);
+    response->addHeader("Content-Encoding", "gzip");
+    request->send(response);
+  });
+  // server.on("/bootstrap.min.css.map", HTTP_GET, [](AsyncWebServerRequest *request){
+  //   AsyncWebServerResponse *response = request->beginResponse_P(200, "", bootstrap_min_css_map_gz, bootstrap_min_css_map_gz_len);
+  //   response->addHeader("Content-Encoding", "gzip");
+  //   request->send(response);
+  // });
+    server.on("/jquery.min.js", HTTP_GET, [](AsyncWebServerRequest *request){
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/javascript", jquery_min_js_gz, jquery_min_js_gz_len);
+    response->addHeader("Content-Encoding", "gzip");
+    request->send(response);
+  });
+  server.onNotFound([](AsyncWebServerRequest *request) {
+		AsyncWebServerResponse *response = request->beginResponse(404, "text/plain", "Not found");
+		request->send(response);
+	});
+  server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request){
+    if(request->getParam("action", true)->value() == "reset"){
+      request->send(200, "text/plain", "Configuration file removed, Device will reboot soon.<br>Please connect to default network to first configure.");
+      delay(1000);
+      reset_config();
+    }
+  });
+  server.on("/restart", HTTP_POST, handleRestart);
+  server.begin();
+}
+
+// normall route
 void ICACHE_FLASH_ATTR webserver(){
   // Web Server using main web service
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
     request->send(SPIFFS, "/index.html", String(), false, processor);
-  });
-  // Route to load required file
-  server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(SPIFFS, "/style.css", "text/css");
   });
 
     // Route to set GPIO to HIGH
@@ -227,60 +222,30 @@ void ICACHE_FLASH_ATTR webserver(){
     request->send(SPIFFS, "/index.html", String(), false, processor);
   });
 
-  server.on("/temperature", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send_P(200, "text/plain", getTemperature().c_str());
-  });
-  
-  server.on("/humidity", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send_P(200, "text/plain", getHumidity().c_str());
-  });
-  
-  server.on("/pressure", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send_P(200, "text/plain", getPressure().c_str());
-  });
-
 
   //web configuration and 404
   server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(SPIFFS, "/config.html", String(), false, config_processor);
+    request->send(SPIFFS, "/konfig.html", String(), false, config_processor);
   });
 
   server.on("/save_config", HTTP_POST, handleConfig);
-
-  server.on("/reset", HTTP_POST, [](AsyncWebServerRequest *request){
-    if(request->getParam("action", true)->value() == "reset"){
-      request->send(200, "text/plain", "Device reseting");
-      delay(1000);
-      reset_config();
-    }
-  });
-
-  server.on("/restart", HTTP_POST, handleRestart);
-
-  server.onNotFound([](AsyncWebServerRequest *request) {
-		AsyncWebServerResponse *response = request->beginResponse(404, "text/plain", "Page you are requested cannot be found!!");
-		request->send(response);
-	});
-  server.begin();
+  handle_general();
 }
 
 // fallback and first configuration route
 void ICACHE_FLASH_ATTR webserver_fallback(){
-  // Route to load requested file
-  server.on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(SPIFFS, "/style.css", "text/css");
-  });
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send(SPIFFS, "/config.html", String(), false, config_processor);
-  });
 
-  server.on("/save_config", HTTP_POST,  [](AsyncWebServerRequest *request){
-    request->send(200, "text/plain", "Configuration is saving. Device will reboot soon!!");
-    handleConfig(request);
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    AsyncWebServerResponse *response = request->beginResponse_P(200, "text/html", first_config_html_gz, first_config_html_gz_len);
+    response->addHeader("Content-Encoding", "gzip");
+    request->send(response);
   });
-  server.onNotFound([](AsyncWebServerRequest *request) {
-		AsyncWebServerResponse *response = request->beginResponse(404, "text/plain", "Not found");
-		request->send(response);
-	});
-  server.begin();
+  server.on("/", HTTP_POST, handleFirstConfig);
+
+  // server.on("/save_config", HTTP_POST,  [](AsyncWebServerRequest *request){
+  //   request->send(200, "text/plain", "Configuration is saving. Device will reboot soon!!");
+  //   handleConfig(request);
+  // });
+
+  handle_general();
 }

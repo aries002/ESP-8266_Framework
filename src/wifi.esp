@@ -1,63 +1,51 @@
 bool ICACHE_FLASH_ATTR wifi_client_setup(const char *ssid, const char *password){
-#ifdef DEBUG
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-  Serial.println(password);
-#endif
+  String msg;
+  msg = "Connecting to "+ String(ssid);
+  Log(msg,3);
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   if (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    Serial.println("WiFi Failed!");
+    Log("WiFi connection timeout", 2);
     return false;
   }
   if(WiFi.status() == WL_CONNECTED){
-#ifdef DEBUG
-    Serial.println();
-    Serial.println("WiFi connected!!");
-    Serial.print("IP Address : ");
-    Serial.println(WiFi.localIP());
-#endif
+    WiFi.setAutoReconnect(true);
+    WiFi.persistent(true);
+    Log("WiFi connected!!");
+    Log("", 11);
     return true;
   }
   else{
-#ifdef DEBUG
-    Serial.println();
-    Serial.println("connection timeout.");
-#endif
+    Log("Conection failed!", 1);
     return false;
   }
 }
 
 bool ICACHE_FLASH_ATTR wifi_AP_setup(const char *ssid, const char *password = NULL){
-
+  String msg;
   if (password != NULL)
   {
-#ifdef DEBUG
-    Serial.print("AP password   : ");
-    Serial.println(password);
-#endif
+    msg = "AP password" + String(password);
+    Log(msg,3);
+
   }
-  // Serial.println(ssid);
-  // Serial.println(password);
   if(!WiFi.softAP(ssid, password)){
-    Serial.println("AP Setup Failed!!");
-    // WiFi.printDiag(Serial);
+    Log("AP Setup Failed!!", 1);
     return false;
   }else{
+    Log("AP setup successfully.", 3);
     return true;
   }
 }
 
 bool ICACHE_FLASH_ATTR wifi_fallback(){
-#ifdef DEBUG
-  Serial.println("Setting up default Access Point Almost Smart");
-  Serial.println("Password    : 1234567890");
-#endif
+  Log("Setting up default Access Point Almost Smart");
+  Log("Password    : 1234567890");
   WiFi.softAP("Almost Smart", "1234567890");
   return true;
 }
 
-void wifi_set_to_fallback(){
+void ICACHE_FLASH_ATTR wifi_set_to_fallback(){
   WiFi.disconnect(true);
   wifi_fallback();
 }

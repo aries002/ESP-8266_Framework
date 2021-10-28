@@ -1,71 +1,249 @@
-bool ICACHE_FLASH_ATTR set_config(){
 
-  File file_konfig = SPIFFS.open("/konfig.json", "r");
-  if(!file_konfig){
-    Log("Config file not found!", 1);
-    return false;
-  }
-  DynamicJsonBuffer json_config_Buffer;
-  // DynamicJsonBuffer jsonBuffer;
-  JsonObject& json_konfig = json_config_Buffer.parseObject(file_konfig);
-  if(!json_konfig.success()){
-    Log("Failed to parse json configuration!!", 0);
-    file_konfig.close();
-    return false;
-  }
+bool ICACHE_FLASH_ATTR save_system_webconfig(AsyncWebServerRequest *request){
+  if(request->hasParam("system_name", true) && request->hasParam("wifi_ssid", true)){
 
-  // get wifi configuration
-  String wifiSSID = json_konfig["wifi_ssid"];
-  wifi_ssid = strdup(wifiSSID.c_str());
-  String wifiPassword = json_konfig["wifi_password"];
-  wifi_password = strdup(wifiPassword.c_str());
-  wifi_mode = json_konfig["wifi_mode"];
+    DynamicJsonBuffer system_JsonBuffer;
+    JsonObject& root = system_JsonBuffer.createObject();
 
-  // get web udater configuration
-  if(json_konfig["web_updater_url"] != ""){
-    web_updater = true;
-    String proc_web_updater_url = json_konfig["web_updater_url"];
-    web_updater_url = strdup(proc_web_updater_url.c_str());
-    if(json_konfig["web_updater_token"] != NULL){
-      String proc_web_updater_token = json_konfig["web_updater_token"];
-      web_updater_token = strdup(proc_web_updater_token.c_str());
+    root["system_name"] = (request->getParam("system_name", true)->value() == "") ? request->getParam("system_name", true)->value() : get_device_id();
+
+    if(SPIFFS.exists("/system.json")){
+      SPIFFS.remove("/system.json");
+      Log("System config file removed", 3);
+    }
+
+    File system_config_file = SPIFFS.open("/system.json", "w");
+    if(!root.printTo(system_config_file)){
+      Log("Failed to save system config", 0);
+      return false;
+    }
+    else{
+      Log("System config saved", 3);
+      return true;
     }
   }
+  return false;
+}
 
-  // get mqtt configuration
-  mqtt = json_konfig["mqtt"];
-  if(mqtt){
-    String proc_mqtt_host = json_konfig["mqtt_host"];
-    mqtt_host = strdup(proc_mqtt_host.c_str());
-    if(json_konfig["mqtt_user"] != ""){
-      String proc_mqtt_user = json_konfig["mqtt_user"];
-      mqtt_user = strdup(proc_mqtt_user.c_str());
-      String proc_mqtt_password = json_konfig["mqtt_password"];
-      mqtt_password = strdup(proc_mqtt_password.c_str());
+bool ICACHE_FLASH_ATTR save_webupdater_webconfig(AsyncWebServerRequest *request){
+  return false;
+}
+
+bool ICACHE_FLASH_ATTR save_mqtt_webconfig(AsyncWebServerRequest *request){
+  if(request->hasParam("mqtt_host", true)){
+    if(request->getParam("mqtt_host", true)->value() == ""){
+      Log("MQTT Host empty!!", 3);
+      return false;
     }
-    String proc_mqtt_pub_topic = json_konfig["mqtt_pub_topic"];
-    mqtt_pub_topic = strdup(proc_mqtt_pub_topic.c_str());
-    String proc_mqtt_sub_topic = json_konfig["mqtt_sub_topic"];
-    mqtt_sub_topic = strdup(proc_mqtt_sub_topic.c_str());
-    
-    String proc_mqtt_topic = json_konfig["mqtt_topic"];
-    mqtt_topic = strdup(proc_mqtt_topic.c_str());
-    String proc_mqtt_clientID = json_konfig["mqtt_clientID"];
-    mqtt_clientID = strdup(proc_mqtt_clientID.c_str());
-#ifdef DEBUG
-    Serial.println("Mqtt activated!!");
-    Serial.println(mqtt_host);
-#endif
+    DynamicJsonBuffer mqtt_JsonBuffer;
+    JsonObject& root = mqtt_JsonBuffer.createObject();
+    root["mqtt_host"] = request->getParam("mqtt_host", true)->value();
+    if(request->hasParam("mqtt_enable", true)){
+      root["mqtt"] = (request->getParam("mqtt_enable", true)->value()) ? true : false;
+    }else{
+      root["mqtt"] = false;
+    }
+    root["mqtt_clientID"] = mqtt_clientID;
+    root["mqtt_user"] = (request->hasParam("mqtt_user", true)) ? request->getParam("mqtt_user", true)->value() : "";
+    root["mqtt_password"] = (request->hasParam("mqtt_password", true)) ? request->getParam("mqtt_password", true)->value() : "";
+    root["mqtt_sub_topic"] = (request->hasParam("mqtt_sub_topic", true)) ? request->getParam("mqtt_sub_topic", true)->value() : "ESPFrame-sub";
+    root["mqtt_pub_topic"] = (request->hasParam("mqtt_pub_topic", true)) ? request->getParam("mqtt_pub_topic", true)->value() : "ESPFrame-pub";
+
+    if(SPIFFS.exists("/mqtt.json")){
+      SPIFFS.remove("/mqtt.json");
+      Log("mqtt.json removed", 3);
+    }
+
+    File mqtt_config_file = SPIFFS.open("/mqtt.json", "w");
+    if(!root.printTo(mqtt_config_file)){
+      Log("Failed to save mqtt configuration!!", 0);
+      mqtt_config_file.close();
+      return false;
+    }
+    else{
+      Log("Mqtt configuration saved.", 3);
+      mqtt_config_file.close();
+      return true;
+    }
   }
-  
-  // close configuration file
-  file_konfig.close();
-  return true;
+  Log("save_mqtt_webconfig fuction failed", 3);
+  return false;
+}
+
+bool ICACHE_FLASH_ATTR save_wifi_webconfig(AsyncWebServerRequest *request){
+  if(request->hasParam("wifi_ssid", true) && request->hasParam("wifi_password", true)){
+    if(request->getParam("wifi_ssid", true)->value() == ""){
+      Log("WiFi SSID cannot be empty!", 1);
+      return false;
+    }
+    DynamicJsonBuffer JsonBuffer;
+    JsonObject& root = JsonBuffer.createObject();
+    root["wifi_ssid"] = request->getParam("wifi_ssid", true)->value();
+    root["wifi_password"] = request->getParam("wifi_password", true)->value();
+    if(request->hasParam("wifi_mode", true)){
+      if(request->getParam("wifi_mode", true)->value() == "true"){
+        root["wifi_mode"] = true;
+      }else{
+        root["wifi_mode"] = false;
+      }
+    }else{
+      root["wifi_mode"] = false;
+    }
+    if(SPIFFS.exists("/wifi.json")){
+      SPIFFS.remove("/wifi.json");
+      Log("wifi.json removed.", 3);
+    }
+    File config_file = SPIFFS.open("/wifi.json", "w");
+    if(root.printTo(config_file)){
+      Log("Failed to write wifi config file!", 0);
+      config_file.close();
+      return false;
+    }else{
+      Log("WiFi configuration saved.", 3);
+      config_file.close();
+      return true;
+    }
+  }
+  return false;
 }
 
 void ICACHE_FLASH_ATTR reset_config(){
-  Log("Resetting configuration..", 2);
-  SPIFFS.remove("/konfig.json");
-  delay(1000);
+  Log("Configuration reset requested.", 2);
+  if(SPIFFS.exists("/system.json")){
+    SPIFFS.remove("/system.json");
+    Log("Syetem configuration removed.", 2);
+  }
+  if(SPIFFS.exists("/wifi.json")){
+    SPIFFS.remove("/wifi.json");
+    Log("WiFi Configuration removed.", 2);
+  }
+  if(SPIFFS.exists("/mqtt.json")){
+    SPIFFS.remove("/mqtt.json");
+    Log("MQTT Configuration removed.", 2);
+  }
+  if(SPIFFS.exists("/web_updater.json")){
+    SPIFFS.remove("/web_updater.json");
+    Log("Web Updater Configuration removed.", 2);
+  }
+  Log("Rebooting");
   req_reboot = true;
+}
+
+bool ICACHE_FLASH_ATTR set_system_config(){
+  if(!SPIFFS.exists("/system.json")){
+    Log("System config file not fund!", 3);
+    return false;
+  }
+  File config_file = SPIFFS.open("/system.json", "r");
+  DynamicJsonBuffer JsonBuffer;
+  JsonObject &root = JsonBuffer.parseObject(config_file);
+  config_file.close();
+  if(!root.success()){
+    Log("Failed to parse system configuration!", 0);
+    return false;
+  }
+
+  String S_system_name = root["system_name"];
+  system_name = strdup(S_system_name.c_str());
+  return true;
+}
+
+bool ICACHE_FLASH_ATTR set_wifi_config(){
+  if(!SPIFFS.exists("/wifi.json")){
+    Log("WiFi config file not fund!", 3);
+    return false;
+  }
+  File config_file = SPIFFS.open("/wifi.json", "r");
+  DynamicJsonBuffer JsonBuffer;
+  JsonObject &root = JsonBuffer.parseObject(config_file);
+  config_file.close();
+  if(!root.success()){
+    Log("Failed to parse WiFi configuration!", 0);
+    return false;
+  }
+  
+  String wifiSSID = root["wifi_ssid"];
+  wifi_ssid = strdup(wifiSSID.c_str());
+  String wifiPassword = root["wifi_password"];
+  wifi_password = (wifiPassword == "") ? NULL : strdup(wifiPassword.c_str());
+  wifi_mode = root["wifi_mode"];
+  return true;
+  
+}
+
+bool ICACHE_FLASH_ATTR set_mqtt_config(){
+  if(!SPIFFS.exists("/mqtt.json")){
+    Log("MQTT config file not fund!", 3);
+    return false;
+  }
+  File config_file = SPIFFS.open("/mqtt.json", "r");
+  DynamicJsonBuffer JsonBuffer;
+  JsonObject &root = JsonBuffer.parseObject(config_file);
+  config_file.close();
+  if(!root.success()){
+    Log("Failed to parse MQTT configuration!", 0);
+    return false;
+  }
+
+
+  String proc_mqtt_host = root["mqtt_host"];
+  mqtt_host = strdup(proc_mqtt_host.c_str());
+  if(root["mqtt_user"] != ""){
+    String proc_mqtt_user = root["mqtt_user"];
+    mqtt_user = strdup(proc_mqtt_user.c_str());
+    String proc_mqtt_password = root["mqtt_password"];
+    mqtt_password = strdup(proc_mqtt_password.c_str());
+  }
+  String proc_mqtt_pub_topic = root["mqtt_pub_topic"];
+  mqtt_pub_topic = strdup(proc_mqtt_pub_topic.c_str());
+  String proc_mqtt_sub_topic = root["mqtt_sub_topic"];
+  mqtt_sub_topic = strdup(proc_mqtt_sub_topic.c_str());
+
+  String proc_mqtt_clientID = root["mqtt_clientID"];
+  mqtt_clientID = strdup(proc_mqtt_clientID.c_str());
+  if(!root["mqtt"]){
+    Log("MQTT dissabled!", 3);
+    return false;
+  }else{
+    Log("MQTT enabled!", 3);
+    return true;
+  }
+}
+
+bool ICACHE_FLASH_ATTR set_webupdater_config(){
+  return false;
+}
+
+bool ICACHE_FLASH_ATTR save_first_webconfig(AsyncWebServerRequest *first_request){
+  // set wifi
+  bool sts_system = save_system_webconfig(first_request);
+  bool sts_wifi = save_wifi_webconfig(first_request);
+  if(!sts_system && !sts_wifi){
+    Log("Wifi & system configuration failed!", 1);
+    return false;
+  }else if(!sts_system && sts_wifi){
+    Log("System configuation failed!", 2);
+    // return true;
+  }
+  
+  save_mqtt_webconfig(first_request);
+  return true;
+}
+
+// calling configuration
+bool ICACHE_FLASH_ATTR set_config(){
+  bool stat_system = set_system_config();
+  bool stat_wifi = set_wifi_config();
+  mqtt = set_mqtt_config();
+  web_updater = set_webupdater_config();
+  Log("configuration finished.");
+  if(stat_system && stat_wifi){
+    Log("System configured",3);
+    return true;
+  }else{
+    mqtt = false;
+    web_updater = false;
+    Log("System configuration failed!",3);
+    return false;
+  }
 }

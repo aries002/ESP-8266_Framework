@@ -8,6 +8,7 @@
     <script src="bootstrap.min.js"></script>
   </head>
   <body>
+    <div style="display: %NAVBAR%;">
     <!-- NAVBAR -->
     <nav class="navbar navbar-inverse">
       <div class="container-fluid">
@@ -16,7 +17,8 @@
         </div>
         <ul class="nav navbar-nav">
           <li><a href="/">Home</a></li>
-          <li class="dropdown active">
+          <li><a href="/config">Configuration</a></li>
+          <!-- <li class="dropdown active">
             <a class="dropdown-toggle" data-toggle="dropdown" href="#">Configuration
             <span class="caret"></span></a>
             <ul class="dropdown-menu">
@@ -26,7 +28,7 @@
               <li><a href="/config#rest">REST Client</a></li>
               <li><a href="/config#reset">Reset/Upgrade</a></li>
             </ul>
-          </li>
+          </li> -->
         </ul>
         <form class="navbar-form navbar-left" action="restart" method="POST">
           <input type="hidden" name="action" value="restart">
@@ -34,6 +36,8 @@
         </form>
       </div>
     </nav>
+  </div>
+
     <!-- MAIN BODY -->
     <div class="container-fluid">
       <div class="col-lg-6 col-lg-offset-3">
@@ -89,7 +93,7 @@
                   <input type="hidden" name="config" value="mqtt">
                   <div class="form-group">
                     <div class="checkbox">
-                      <label><input type="checkbox" value="true" name="mqtt">Enable</label>
+                      <label><input type="checkbox" value="true" name="mqtt_enable">Enable</label>
                     </div>
                   </div>
                   <div class="form-group">

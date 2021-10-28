@@ -1,54 +1,63 @@
 //---------------------------------------SYSTEM MQTT CONNECTOR----------------------
-void ICACHE_FLASH_ATTR mqtt_callback(char* topic, byte* payload, int length) {
-#ifdef DEBUG
-  Serial.print("Message arrived [");
-  Serial.print(topic);
-  Serial.print("] ");
-  for (int i = 0; i < length; i++) {
-    Serial.print((char)payload[i]);
-  }
-  Serial.println();
-#endif
-  // Switch on the LED if an 1 was received as first character
-  if(topic == mqtt_sub_topic){
-    if ((char)payload[0] == '1') {
-      digitalWrite(statusLED, LOW);   // Turn the LED on (Note that LOW is the voltage level
-      // but actually the LED is on; this is because
-      // it is active low on the ESP-01)
-    } else {
-      digitalWrite(statusLED, HIGH);  // Turn the LED off by making the voltage HIGH
-    }
-  }
+bool ICACHE_FLASH_ATTR mqtt_connect(){
+  Log("Connecting to mqtt broker.");
+  mqtt_client.setServer(mqtt_host, 1883);
+  mqtt_client.setCallback(mqtt_subscribe);
+  // Attempt to connect
 
+  if(mqtt_user != NULL && mqtt_password != NULL){
+    mqtt_client.connect(mqtt_clientID,mqtt_user,mqtt_password);
+  }else{
+    mqtt_client.connect(mqtt_clientID);
+  }
+// check connection
+  if (mqtt_client.connected()) {
+    Log("Connected!");
+    // Once connected, publish an announcement...
+    mqtt_client.publish(mqtt_pub_topic, "{message : 'ready'}");
+    // // ... and resubscribe
+    mqtt_client.subscribe(mqtt_sub_topic);
+    return true;
+  } else {
+    int state = mqtt_client.state();
+    Log("Failed, rc="+String(state),1);
+    return false;
+  }
 }
 
+bool ICACHE_FLASH_ATTR mqtt_publish(){
+  String message = mqtt_publish_data();
+  snprintf (msg, MSG_BUFFER_SIZE,strdup(message.c_str()));
+  Log(msg,3);
+  mqtt_client.publish(mqtt_pub_topic,msg);
+  return true;
+  }
 
 bool ICACHE_FLASH_ATTR mqtt_reconnect() {
   // Loop until we're reconnected
+  Log("Attempting MQTT connection...");
   if (!mqtt_client.connected()) {
-#ifdef DEBUG
-    Serial.print("Attempting MQTT connection...");
-#endif
-
     // Attempt to connect
-    
-    if (mqtt_client.connect(mqtt_clientID)) {
-#ifdef DEBUG
-      Serial.println("connected");
+    if(mqtt_user != NULL && mqtt_password != NULL){
+      mqtt_client.connect(mqtt_clientID,mqtt_user,mqtt_password);
+    }else{
+      mqtt_client.connect(mqtt_clientID);
+    }
+    //check connection
+    if (mqtt_client.connected()) {
+      Log("Connected!");
       // Once connected, publish an announcement...
-#endif
-      mqtt_client.publish(mqtt_pub_topic, "hello world");
-      // ... and resubscribe
+      mqtt_client.publish(mqtt_pub_topic, "{message : 'ready'}");
+      // // ... and resubscribe
       mqtt_client.subscribe(mqtt_sub_topic);
-      
       return true;
     } else {
-#ifdef DEBUG
-      Serial.print("failed, rc=");
-      Serial.println(mqtt_client.state());
-#endif
+      int state = mqtt_client.state();
+      Log("Failed, rc="+String(state),1);
       return false;
     }
+  }else{
+    Log("MQTT alredy connected");
   }
   return true;
 }

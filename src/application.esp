@@ -1,0 +1,40 @@
+/*
+//============================================================================================
+
+//============================================================================================
+*/
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+bool ICACHE_FLASH_ATTR user_setup(){
+    lcd.begin(16,2);
+    lcd.init();
+    lcd.backlight();
+    lcd.setCursor(0, 0);
+    lcd.print("HELLO WORLD!");
+    lcd.setCursor(0, 1);
+    lcd.print("ESPFrame Testing!!");
+    return true;
+}
+
+bool IRAM_ATTR user_loop(){
+    return true;
+}
+
+void ICACHE_FLASH_ATTR mqtt_subscribe(char* topic, byte* payload, unsigned int length){
+    Log("MQTT message arive.",3);
+    Log(topic,4);
+    String isi_payload = "";
+    for (unsigned int i = 0; i < length; i++) {
+        isi_payload += ((char)payload[i]);
+    }
+    Log(isi_payload,4);
+}
+
+String ICACHE_FLASH_ATTR mqtt_publish_data(){
+    String data = "testing time = ";
+    data += String(millis());
+    return data;
+}
+
+void ICACHE_FLASH_ATTR web_sender(){
+
+}
